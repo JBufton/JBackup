@@ -12,7 +12,9 @@ class JDiffer:
         # Now we have our diff we need to produce a list of changes from this
         changes = []
         for i in range( len(out) ):
-            if out[i][:2] == "- ":
+            if out[i][:2] == "? ":
+                continue
+            elif out[i][:2] == "- ":
                 changes.append({
                     "type": "deleteLine",
                     "lineNumber": i

@@ -1,8 +1,9 @@
-from os.path import isdir, getmtime, join, exists, dirname
+from os.path import isdir, getmtime, join, exists, dirname, expanduser
 from os import walk, listdir, makedirs
 from datetime import datetime
 from Differ import JDiffer
 import pickle
+import argparse
 
 class JBackup_Core:
 
@@ -154,3 +155,32 @@ class JBackup_Core:
         pickle.dump( updateChanges, open( join( self.m_backupPath, pickleFileName ), "wb" ) )
         # Now we have written the update lets get the latest backup state to load those changes into the current backup state
         self.GetBackupState()
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--makeBackup", default=False ,action="store_true", help="Use this flag to make JBackup generate a backup")
+    parser.add_argument("--backupsLocation", nargs="?", default="Default", type=str, help="Use this flag to determine where you want the backup to be made")
+    parser.add_argument("--addBackupPaths", nargs="*", default=[], help="Use this flag to add files or folders to a new backup")
+    parser.add_argument("--restore", nargs="?", default="Latest", help="Use this flag to restore the backups at a specified date or add no extra args for latest")
+    parser.add_argument("--restoreLocation", nargs="?", default="Default", help="Use this flag to determine the location of the restored files when used in conjunction with --restore")
+    args = parser.parse_args()
+
+    restoreLocation = args.restoreLocation
+    if args.restoreLocation == "Default":
+        restoreLocation = join( expanduser("~"), "JBackup", "Restore" )
+        if not exists(restoreLocation):
+            makedirs(restoreLocation)
+
+    backupsLocation = args.backupsLocation
+    if args.backupsLocation == "Default":
+        backupsLocation = join( expanduser("~"), "JBackup", "Backups" )
+        if not exists(backupsLocation):
+            makedirs(backupsLocation)
+    
+    JBackup = JBackup_Core()
+    JBackup.m_backupPath = backupsLocation
+
+    if args.makeBackup:
+        JBackup.UpdateBackup(_newPaths=args.addBackupPaths)
+    elif args.restore:
+        JBackup.RebuildFiles(_outputDir=restoreLocation)
