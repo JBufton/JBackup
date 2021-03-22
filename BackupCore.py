@@ -74,6 +74,9 @@ class JBackup_Core:
                     splitFileContents = fileContents.split("\n")
                     splitFileContents.insert( change["lineNumber"], change["content"] )
                     fileContents = splitFileContents.join("\n")
+                elif change["type"] == "appendLine":
+                    splitFileContents = fileContents.split("\n")
+                    splitFileContents.append( change["content"] )
             return fileContents
         else:
             return None
@@ -107,32 +110,7 @@ class JBackup_Core:
             })
             return changes
         
-        # Cycle through the old file and compare it to the new one
-        oldFileContents = _oldFile.splitlines("\n")
-        oldFileIndex = 0
-        newfileIndex = 0
-        finishedDiff = False
-        while not finishedDiff:
-            if oldFileIndex + 1 == len( oldFileContents ):
-                # We are at the end of the old files contents, so everything left in the new file contents must be new
-                for i in range(newfileIndex, len(newFileContents)):
-                    changes.append({
-                        "type": "appendline",
-                        "content": newFileContents[i]
-                    })
-                finishedDiff = True
-                continue
-            elif newfileIndex + 1 == len( newFileContents ):
-                # We are at the end of the new files contents, so everything left in the old file must be deleted
-                # We need to delete these lines in reverse so as to not cause issues when rebuilding the file
-                for i in range( len(oldFileContents), oldFileIndex, -1 ):
-                    changes.append({
-                        "type": "deleteline",
-                        "lineNumber": i
-                    })
-                finishedDiff = True
-                continue
-            # Now we have handled end of file situations we need to handle beginning and middle of file changes
+                    
         return changes
 
 
