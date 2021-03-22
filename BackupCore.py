@@ -94,7 +94,7 @@ class JBackup_Core:
 
 
     # Function to find the differences between two files and return a list detailing those changes
-    def GetFileChanges( self, _oldFile, _newFile ):
+    def DiffFiles( self, _oldFile, _newFile ):
         # First we need to read the content of the file
         newfileObject = open( _newFile, "r" )
         newFileContents = newfileObject.readlines()
@@ -108,8 +108,31 @@ class JBackup_Core:
             return changes
         
         # Cycle through the old file and compare it to the new one
-        for line in _oldFile.splitlines("\n"):
-            continue
+        oldFileContents = _oldFile.splitlines("\n")
+        oldFileIndex = 0
+        newfileIndex = 0
+        finishedDiff = False
+        while not finishedDiff:
+            if oldFileIndex + 1 == len( oldFileContents ):
+                # We are at the end of the old files contents, so everything left in the new file contents must be new
+                for i in range(newfileIndex, len(newFileContents)):
+                    changes.append({
+                        "type": "appendline",
+                        "content": newFileContents[i]
+                    })
+                finishedDiff = True
+                continue
+            elif newfileIndex + 1 == len( newFileContents ):
+                # We are at the end of the new files contents, so everything left in the old file must be deleted
+                # We need to delete these lines in reverse so as to not cause issues when rebuilding the file
+                for i in range( len(oldFileContents), oldFileIndex, -1 ):
+                    changes.append({
+                        "type": "deleteline",
+                        "lineNumber": i
+                    })
+                finishedDiff = True
+                continue
+            # Now we have handled end of file situations we need to handle beginning and middle of file changes
         return changes
 
 
@@ -117,7 +140,7 @@ class JBackup_Core:
     def BackupFile( self, _path ):
         fileUpdate = {
             "mtime": getmtime( _path ),
-            "changes": self.GetFileChanges( self.ReBuildFileFromBackup( _path ), _path )
+            "changes": self.DiffFiles( self.ReBuildFileFromBackup( _path ), _path )
         }
 
         return fileUpdate
@@ -145,7 +168,8 @@ class JBackup_Core:
                 if self.isFileUpdated( path ):
                     updateChanges["files"][path] = self.BackupFile( path )
         
-        pickleFileName = str({len( [i for i in listdir( self.m_backupPath ) if ".pkl" in i] ) + 1})
+        updateVersionNumber = str(len( [i for i in listdir( self.m_backupPath ) if ".pkl" in i] ) + 1)
+        pickleFileName = f"{updateVersionNumber}.pkl"
         # Write out the new update
         pickle.dump( updateChanges, open( join( self.m_backupPath, pickleFileName ), "wb" ) )
         # Now we have written the update lets get the latest backup state to load those changes into the current backup state
