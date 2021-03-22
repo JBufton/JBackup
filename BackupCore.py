@@ -1,6 +1,7 @@
 from os.path import isdir, getmtime, join, exists, dirname
 from os import walk, listdir, makedirs
 from datetime import datetime
+from Differ import JDiffer
 import pickle
 
 class JBackup_Core:
@@ -109,8 +110,9 @@ class JBackup_Core:
                 "content": _newFile
             })
             return changes
-        
-                    
+        else:
+            Differ = JDiffer( "difflib" )
+            changes = Differ.Diff( _oldFile.splitlines("\n"), newFileContents )
         return changes
 
 
