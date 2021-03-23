@@ -10,21 +10,31 @@ class JDiffer:
         Differ = difflib.Differ()
         out = list( Differ.compare( _file1, _file2 ))
         # Now we have our diff we need to produce a list of changes from this
+        print("".join(out))
         changes = []
+        index = 0
         for i in range( len(out) ):
             if out[i][:2] == "? ":
                 continue
             elif out[i][:2] == "- ":
                 changes.append({
                     "type": "deleteLine",
-                    "lineNumber": i
+                    "lineNumber": index
                 })
+                index -= 1
             elif out[i][:2] == "+ ":
-                changes.append({
-                    "type": "addLine",
-                    "lineNumber": i,
+                if index + 1 == len(_file1):
+                    changes.append({
+                    "type": "appendLine",
                     "content": out[i][2:]
-                })
+                    })
+                else:
+                    changes.append({
+                        "type": "addLine",
+                        "lineNumber": index,
+                        "content": out[i][2:]
+                    })
+            index += 1
         return changes
 
     def customDiff_diff(self, _file1, _file2 ):
@@ -32,27 +42,25 @@ class JDiffer:
         temp_file2 = _file2
         changes = []
         index = 0
-        finished = False
-        while not finished:
+        while temp_file1 != temp_file2:
             print(f"index: {index}")
             print(f"oldfileLength: {len(temp_file1)}")
             print(f"newfileLength: {len(temp_file2)}")
-            if index > len(temp_file1)-1 and index > len(temp_file2)-1:
-                print( "Should be finishing")
-                finished = True
-                continue
+            print(f"OldFile: {''.join(temp_file1)}")
+            print(f"NewFile: {''.join(temp_file2)}")
             if index > len(temp_file1)-1 and index <= len(temp_file2)-1:
                 # We've reached the end of file1 so we need to append the rest of the contents of file2 to file1
-                temp_file1.append(temp_file2[index])
-                changes.append({
-                        "type": "appendLine",
-                        "content": temp_file2[index]
-                    })
+                for i in range(index, len(temp_file2)-1):
+                    temp_file1.append(temp_file2[index + i])
+                    changes.append({
+                            "type": "appendLine",
+                            "content": temp_file2[index + i]
+                        })
                 index += 1
                 continue
             if index > len(temp_file2)-1 and index <= len(temp_file1)-1:
                 # We've reached the end of file2 but there is still content in file1, this should be removed
-                for i in range(index, len(temp_file1)):
+                for i in range(index, len(temp_file1)-1):
                     del temp_file1[index]
                     changes.append({
                         "type": "deleteLine",
@@ -67,7 +75,6 @@ class JDiffer:
                 index += 1
                 continue
             else:
-                print(temp_file2[index:])
                 if temp_file1[index] in temp_file2[index:]:
 
                     while temp_file1[index] != temp_file2[index]:
@@ -91,6 +98,8 @@ class JDiffer:
                     })
             print(changes)
             index += 1
+        print(temp_file1)
+        print(temp_file2)
         return changes
 
 

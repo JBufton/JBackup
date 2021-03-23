@@ -122,7 +122,7 @@ class JBackup_Core:
             })
             return changes
         else:
-            Differ = JDiffer( "custom" )
+            Differ = JDiffer( "difflib" )
             changes = Differ.Diff( _oldFile, newFileContents )
         return changes
 
