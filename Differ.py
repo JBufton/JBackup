@@ -18,7 +18,7 @@ class JDiffer:
             elif out[i][:2] == "- ":
                 changes.append({
                     "type": "deleteLine",
-                    "lineNumber": index
+                    "lineNumber": index,
                     "content": out[i][2:]
                 })
                 index -= 1
