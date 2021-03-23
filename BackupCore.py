@@ -15,7 +15,7 @@ class JBackup_Core:
         self.m_currentBackupState = {
             "latest": False,
             "ctime": None,
-            "backupPaths": [],
+            "backupPaths": set(),
             "files":{}
         }
 
@@ -34,7 +34,7 @@ class JBackup_Core:
             # Check to see if we need to add these changes
             if updateDict["ctime"] <= _date:
                 self.m_currentBackupState["ctime"] = updateDict["ctime"]
-                self.m_currentBackupState["backupPaths"] += updateDict["backupPaths"]
+                self.m_currentBackupState["backupPaths"].update( updateDict["backupPaths"] )
                 for updateFile in updateDict["files"].keys():
                     # Check if the current update file is in the current backup state
                     if updateFile in self.m_currentBackupState["files"].keys():
@@ -140,10 +140,10 @@ class JBackup_Core:
         updateChanges = {
             "ctime": datetime.now(),
             "files": {},
-            "backupPaths": _newPaths
+            "backupPaths": set(_newPaths)
         }
 
-        backupPaths = self.m_currentBackupState['backupPaths'] + updateChanges["backupPaths"]
+        backupPaths = self.m_currentBackupState['backupPaths'].update(updateChanges["backupPaths"])
 
         for path in backupPaths:
             if isdir(path):
