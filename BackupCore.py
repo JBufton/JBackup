@@ -2,6 +2,7 @@ from os.path import isdir, getmtime, join, exists, dirname, expanduser
 from os import walk, listdir, makedirs
 from datetime import datetime
 from Differ import JDiffer
+from platform import system
 import pickle
 import argparse
 
@@ -11,7 +12,12 @@ class JBackup_Core:
         # Location of where to store backup
         self.m_backupPath = ""
         # The list of files in the backup and their current states aswell as other information about the current backup
-        self.m_currentBackupState = {}
+        self.m_currentBackupState = {
+            "latest": False,
+            "ctime": None,
+            "backupPaths": [],
+            "files":{}
+        }
 
     # Function to set m_currentBackupState to a specific date or latest if _date set to default
     def GetBackupState( self, _date=None ):
@@ -33,11 +39,11 @@ class JBackup_Core:
                     # Check if the current update file is in the current backup state
                     if updateFile in self.m_currentBackupState["files"].keys():
                         self.m_currentBackupState["files"][updateFile]["mtime"] = updateDict["files"][updateFile]["mtime"]
-                        self.m_currentBackupState["files"][updateFile]["changes"].append( updateDict["files"][updateFile]["changes"] )
+                        self.m_currentBackupState["files"][updateFile]["changes"].extend(updateDict["files"][updateFile]["changes"])
                     else:
                         self.m_currentBackupState["files"][updateFile] = {}
                         self.m_currentBackupState["files"][updateFile]["mtime"] = updateDict["files"][updateFile]["mtime"]
-                        self.m_currentBackupState["files"][updateFile]["changes"] = [ updateDict["files"][updateFile]["changes"] ]
+                        self.m_currentBackupState["files"][updateFile]["changes"] = updateDict["files"][updateFile]["changes"]
             else:
                 # We don't want to apply this update because it is after the date we want to sync to
                 return self.m_currentBackupState
@@ -60,25 +66,22 @@ class JBackup_Core:
     # Function that given a file path gets the contents of the latest backed up version of that file as a list of lines
     def ReBuildFileFromBackup( self, _path):
         if _path in self.m_currentBackupState["files"].keys():
-            fileContents = ""
+            fileContents = []
             # Cycle through changes saved
             for change in self.m_currentBackupState["files"][_path]["changes"]:
+                print(change)
+                print(type(fileContents))
                 # Change is replacing the whole file, normally only made if the file doesn't exist previously
                 if change["type"] == "wholeFile":
                     fileContents = change["content"]
                 # Change is deleting a line at a specific index
                 elif change["type"] == "deleteLine":
-                    splitFileContents = fileContents.split("\n")
-                    del splitFileContents[ change['lineNumber'] ]
-                    fileContents = splitFileContents.join("\n")
+                    del fileContents[ change['lineNumber'] ]
                 # Change is adding in a line at a specific index
                 elif change["type"] == "addLine":
-                    splitFileContents = fileContents.split("\n")
-                    splitFileContents.insert( change["lineNumber"], change["content"] )
-                    fileContents = splitFileContents.join("\n")
+                    fileContents.insert( change["lineNumber"], change["content"] )
                 elif change["type"] == "appendLine":
-                    splitFileContents = fileContents.split("\n")
-                    splitFileContents.append( change["content"] )
+                    fileContents.append( change["content"] )
             return fileContents
         else:
             return None
@@ -86,15 +89,22 @@ class JBackup_Core:
 
     # Function to generate all of the files that are backed up to the desired location
     def RebuildFiles( self, _outputDir ):
+        print("Rebuilding Files")
         if not exists( _outputDir ):
             makedirs( _outputDir )
         for rebuildFile in self.m_currentBackupState["files"].keys():
-            pathToOutputFile = join( _outputDir, rebuildFile )
+            rebuildFilePath = rebuildFile
+            if system() == "Windows":
+                # We need to remove the : from the path
+                rebuildFilePath = rebuildFile.replace(":","")
+            pathToOutputFile = join( _outputDir, rebuildFilePath )
+            print(f"Rebuilding: {pathToOutputFile}")
             if not exists( dirname( pathToOutputFile ) ):
                 makedirs( dirname( pathToOutputFile ) )
             fileContents = self.ReBuildFileFromBackup( rebuildFile )
+            print(fileContents)
             with open( pathToOutputFile, "w" ) as outputRebuildFile:
-                outputRebuildFile.write( fileContents )
+                outputRebuildFile.write( "".join(fileContents) )
 
 
 
@@ -108,12 +118,12 @@ class JBackup_Core:
         if _oldFile == None:
             changes.append({
                 "type": "wholeFile",
-                "content": _newFile
+                "content": newFileContents
             })
             return changes
         else:
-            Differ = JDiffer( "difflib" )
-            changes = Differ.Diff( _oldFile.splitlines("\n"), newFileContents )
+            Differ = JDiffer( "custom" )
+            changes = Differ.Diff( _oldFile, newFileContents )
         return changes
 
 
@@ -161,7 +171,8 @@ if __name__ == "__main__":
     parser.add_argument("--makeBackup", default=False ,action="store_true", help="Use this flag to make JBackup generate a backup")
     parser.add_argument("--backupsLocation", nargs="?", default="Default", type=str, help="Use this flag to determine where you want the backup to be made")
     parser.add_argument("--addBackupPaths", nargs="*", default=[], help="Use this flag to add files or folders to a new backup")
-    parser.add_argument("--restore", nargs="?", default="Latest", help="Use this flag to restore the backups at a specified date or add no extra args for latest")
+    parser.add_argument("--restore", default=False, action="store_true", help="Use this flag to restore the backups")
+    parser.add_argument("--restoreDate", nargs="?", default="Latest", type=str, help="Use this flag in conjunction with --restore to choose the date to which to restore the files")
     parser.add_argument("--restoreLocation", nargs="?", default="Default", help="Use this flag to determine the location of the restored files when used in conjunction with --restore")
     args = parser.parse_args()
 
@@ -183,4 +194,9 @@ if __name__ == "__main__":
     if args.makeBackup:
         JBackup.UpdateBackup(_newPaths=args.addBackupPaths)
     elif args.restore:
+        if args.restoreDate == "Latest":
+            JBackup.GetBackupState()
+        else:
+            # TODO somehow need to convert users input date to datetime date
+            JBackup.GetBackupState()
         JBackup.RebuildFiles(_outputDir=restoreLocation)
