@@ -142,16 +142,14 @@ class JBackup_Core:
             "files": {},
             "backupPaths": set(_newPaths)
         }
-
-        backupPaths = self.m_currentBackupState['backupPaths'].update(updateChanges["backupPaths"])
-
+        backupPaths = self.m_currentBackupState['backupPaths'].union(updateChanges["backupPaths"])
         for path in backupPaths:
             if isdir(path):
                 # Walk the directory tree
                 for root, dirs, files in walk( path ):
                     for filePath in [join(root, f) for f in files]:
                         if self.isFileUpdated( filePath ):
-                            updateChanges["files"][filePath] = self.BackupFile( path )
+                            updateChanges["files"][filePath] = self.BackupFile( filePath )
             else:
                 if self.isFileUpdated( path ):
                     updateChanges["files"][path] = self.BackupFile( path )
