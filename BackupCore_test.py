@@ -4,6 +4,7 @@ from os import listdir
 from random import randint, choice
 from string import ascii_letters
 from BackupCore import JBackup_Core
+from pprint import pprint
 
 def setupFiles(_numberOfFiles, _location):
     for i in range( _numberOfFiles ):
@@ -11,7 +12,7 @@ def setupFiles(_numberOfFiles, _location):
         lines = randint(1,30)
         for line in range(lines):
             length = randint(1,50)
-            tempFile.write( ''.join(choice(ascii_letters) for i in range(length)) )
+            tempFile.write( ''.join(choice(ascii_letters) for i in range(length)) + "\n" )
 
 def changeFiles( _location, _addFileLength ):
     for testFile in [i for i in listdir(_location) if isfile(i)]:
@@ -26,7 +27,7 @@ def changeFiles( _location, _addFileLength ):
                 index -= 1
             elif randint(0,1):
                 # insert a new line
-                testFileContents.insert( index, ''.join(choice(ascii_letters) for i in range(_addFileLength)) )
+                testFileContents.insert( index, ''.join(choice(ascii_letters) for i in range(_addFileLength)) + "\n" )
         testFileObject = open( join(_location, testFile), "w" )
         testFileObject.write(''.join(testFileContents))
 
@@ -54,7 +55,10 @@ class TestBackupCore:
                     for tempFile_Original in [join(tempFiles, i) for i in listdir(tempFiles)]:
                         with open(tempFile_Original, "r") as originalFile:
                             originalFileContents = originalFile.readlines()
-                            with open(join(tempRestore, tempFile_Original), "r") as recreatedFile:
+                            with open(join(tempRestore, tempFile_Original.replace(":", "")), "r") as recreatedFile:
                                 recreatedFileContents = recreatedFile.readlines()
                                 assert originalFileContents == recreatedFileContents
+                                pprint(originalFileContents)
+                                pprint(recreatedFileContents)
+                                print( f"{tempFile_Original} == {join(tempRestore, tempFile_Original.replace(':', ''))}")
 
