@@ -69,8 +69,6 @@ class JBackup_Core:
             fileContents = []
             # Cycle through changes saved
             for change in self.m_currentBackupState["files"][_path]["changes"]:
-                print(change)
-                print(type(fileContents))
                 # Change is replacing the whole file, normally only made if the file doesn't exist previously
                 if change["type"] == "wholeFile":
                     fileContents = change["content"]
@@ -102,7 +100,6 @@ class JBackup_Core:
             if not exists( dirname( pathToOutputFile ) ):
                 makedirs( dirname( pathToOutputFile ) )
             fileContents = self.ReBuildFileFromBackup( rebuildFile )
-            print(fileContents)
             with open( pathToOutputFile, "w" ) as outputRebuildFile:
                 outputRebuildFile.write( "".join(fileContents) )
 

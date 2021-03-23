@@ -10,7 +10,6 @@ class JDiffer:
         Differ = difflib.Differ()
         out = list( Differ.compare( _file1, _file2 ))
         # Now we have our diff we need to produce a list of changes from this
-        print("".join(out))
         changes = []
         index = 0
         for i in range( len(out) ):
