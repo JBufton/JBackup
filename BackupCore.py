@@ -20,30 +20,37 @@ class JBackup_Core:
         }
 
     # Function to set m_currentBackupState to a specific date or latest if _date set to default
-    def GetBackupState( self, _date=None ):
-        if _date == None:
+    def GetBackupState( self, _date=None, _time=None ):
+        if _date == None and _time == None:
             self.m_currentBackupState["latest"] = True
-            _date = datetime.now()
+            _date = datetime.now().date().strftime("%d/%m/%Y")
+            _time = datetime.now().time().strftime("%H/%M/%S")
         else:
             self.m_currentBackupState["latest"] = False
+        # We need to formate the date and time into YMD and HMS
+        formattedDate = datetime.strptime(_date, "%d/%m/%Y").strftime("%Y%m%d")
+        formattedTime = datetime.strptime(_time, "%H/%M/%S").strftime("%H%M%S")
+        
         # First get the list of backup files in order
         files = sorted([f for f in listdir(self.m_backupPath) if ".pkl" in f])
         # Go through all the files in order
         for i in range(0, len(files) ):
             updateDict = pickle.load( open(join(self.m_backupPath, files[i]), "rb") )
             # Check to see if we need to add these changes
-            if updateDict["ctime"] <= _date:
-                self.m_currentBackupState["ctime"] = updateDict["ctime"]
-                self.m_currentBackupState["backupPaths"].update( updateDict["backupPaths"] )
-                for updateFile in updateDict["files"].keys():
-                    # Check if the current update file is in the current backup state
-                    if updateFile in self.m_currentBackupState["files"].keys():
-                        self.m_currentBackupState["files"][updateFile]["mtime"] = updateDict["files"][updateFile]["mtime"]
-                        self.m_currentBackupState["files"][updateFile]["changes"].extend(updateDict["files"][updateFile]["changes"])
-                    else:
-                        self.m_currentBackupState["files"][updateFile] = {}
-                        self.m_currentBackupState["files"][updateFile]["mtime"] = updateDict["files"][updateFile]["mtime"]
-                        self.m_currentBackupState["files"][updateFile]["changes"] = updateDict["files"][updateFile]["changes"]
+            if updateDict["ctime_date"] <= formattedDate:
+                if updateDict["ctime_time"] <= formattedTime:
+                    self.m_currentBackupState["ctime_date"] = updateDict["ctime_date"]
+                    self.m_currentBackupState["ctime_time"] = updateDict["ctime_time"]
+                    self.m_currentBackupState["backupPaths"].update( updateDict["backupPaths"] )
+                    for updateFile in updateDict["files"].keys():
+                        # Check if the current update file is in the current backup state
+                        if updateFile in self.m_currentBackupState["files"].keys():
+                            self.m_currentBackupState["files"][updateFile]["mtime"] = updateDict["files"][updateFile]["mtime"]
+                            self.m_currentBackupState["files"][updateFile]["changes"].extend(updateDict["files"][updateFile]["changes"])
+                        else:
+                            self.m_currentBackupState["files"][updateFile] = {}
+                            self.m_currentBackupState["files"][updateFile]["mtime"] = updateDict["files"][updateFile]["mtime"]
+                            self.m_currentBackupState["files"][updateFile]["changes"] = updateDict["files"][updateFile]["changes"]
             else:
                 # We don't want to apply this update because it is after the date we want to sync to
                 return self.m_currentBackupState
@@ -150,7 +157,8 @@ class JBackup_Core:
         self.GetBackupState()
         # Default change dict
         updateChanges = {
-            "ctime": datetime.now(),
+            "ctime_date": datetime.now().date().strftime("%Y%m%d"),
+            "ctime_time": datetime.now().time().strftime("%H%M%S"),
             "files": {},
             "backupPaths": set(_newPaths)
         }
@@ -184,7 +192,8 @@ if __name__ == "__main__":
     parser.add_argument("--backupsLocation", nargs="?", default="Default", type=str, help="Use this flag to determine where you want the backup to be made")
     parser.add_argument("--addBackupPaths", nargs="*", default=[], help="Use this flag to add files or folders to a new backup")
     parser.add_argument("--restore", default=False, action="store_true", help="Use this flag to restore the backups")
-    parser.add_argument("--restoreDate", nargs="?", default="Latest", type=str, help="Use this flag in conjunction with --restore to choose the date to which to restore the files")
+    parser.add_argument("--restoreDate", nargs="?", default=None, type=str, help="Use this flag in conjunction with --restore to choose the date to which to restore the files, needs to be in format DD/MM/YYYY")
+    parser.add_argument("--restoreTime", nargs="?", default=None, type=str, help="Use this flag in conjunction with --restore to choose the date to which to restore the files, needs to be in format HH/MM/SS")
     parser.add_argument("--restoreLocation", nargs="?", default="Default", help="Use this flag to determine the location of the restored files when used in conjunction with --restore")
     args = parser.parse_args()
 
@@ -206,9 +215,5 @@ if __name__ == "__main__":
     if args.makeBackup:
         JBackup.UpdateBackup(_newPaths=args.addBackupPaths)
     elif args.restore:
-        if args.restoreDate == "Latest":
-            JBackup.GetBackupState()
-        else:
-            # TODO somehow need to convert users input date to datetime date
-            JBackup.GetBackupState()
+        JBackup.GetBackupState(_date=args.restoreDate, _time=args.restoreTime)
         JBackup.RebuildFiles(_outputDir=restoreLocation)
