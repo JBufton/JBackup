@@ -35,15 +35,27 @@ def changeFiles( _location, _addFileLength ):
 
 class TestBackupCore:
 
+    # I want this test to do the following:
+    # Generate 10 files with random content
+    # Use JBackup to back these files up
+    # Edit the files contents twice and backing up after each change
+    # Make sure after each backup that there has been a new backup file saved
+    # Use JBackup to restore the files
+    # Compare the current actual files with their restored counterparts
     def test_10ChangeRoundtrip(self):
+        # Create all the temporary directories we need
         with TemporaryDirectory() as tempFiles:
             with TemporaryDirectory() as tempBackups:
                 with TemporaryDirectory() as tempRestore:
+                    # Create the files
                     setupFiles(10, tempFiles)
+                    # Setup JBackup and create initial backup
                     JBackup = JBackup_Core()
                     JBackup.m_backupPath = tempBackups
                     JBackup.UpdateBackup(_newPaths=[tempFiles])
+                    # Check a backup has been made
                     assert len(listdir(tempBackups)) == 1
+                    # Change and backup the files twice making sure that backup files have been made each time
                     changeFiles(tempFiles, 30)
                     JBackup.UpdateBackup()
                     assert len(listdir(tempBackups)) == 2
@@ -51,12 +63,15 @@ class TestBackupCore:
                     JBackup.UpdateBackup()
                     assert len(listdir(tempBackups)) == 3
                     JBackup.RebuildFiles(tempRestore)
-                    # Now test recreated files match
+                    # Now test recreated files match the originals
                     for tempFile_Original in [join(tempFiles, i) for i in listdir(tempFiles)]:
+                        # Get the original files contents
                         with open(tempFile_Original, "r") as originalFile:
                             originalFileContents = originalFile.readlines()
+                            # Get the restored files contents
                             with open(join(tempRestore, tempFile_Original.replace(":", "")), "r") as recreatedFile:
                                 recreatedFileContents = recreatedFile.readlines()
+                                # Compare
                                 assert originalFileContents == recreatedFileContents
                                 pprint(originalFileContents)
                                 pprint(recreatedFileContents)

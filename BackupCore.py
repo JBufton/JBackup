@@ -48,7 +48,7 @@ class JBackup_Core:
                 # We don't want to apply this update because it is after the date we want to sync to
                 return self.m_currentBackupState
 
-    # Function to back if a file is updated vs the latest file
+    # Function to check if a file is different vs the latest file
     def isFileUpdated( self, _path ):
         # First check if the current backup state is the latest
         if not self.m_currentBackupState["latest"]:
@@ -66,6 +66,7 @@ class JBackup_Core:
     # Function that given a file path gets the contents of the latest backed up version of that file as a list of lines
     def ReBuildFileFromBackup( self, _path):
         if _path in self.m_currentBackupState["files"].keys():
+            # We're working forward through time so first change will always be a whileFile change
             fileContents = []
             # Cycle through changes saved
             for change in self.m_currentBackupState["files"][_path]["changes"]:
@@ -78,6 +79,7 @@ class JBackup_Core:
                 # Change is adding in a line at a specific index
                 elif change["type"] == "addLine":
                     fileContents.insert( change["lineNumber"], change["content"] )
+                # Change is appending a line to the end of the file
                 elif change["type"] == "appendLine":
                     fileContents.append( change["content"] )
             return fileContents
@@ -86,19 +88,25 @@ class JBackup_Core:
 
 
     # Function to generate all of the files that are backed up to the desired location
+    # pretty much recursively use RebuildFileFromBackup()
     def RebuildFiles( self, _outputDir ):
         print("Rebuilding Files")
+        # Make sure the output location exists
         if not exists( _outputDir ):
             makedirs( _outputDir )
+        # We don't necessarily want to restore to the last version to use the backup state we already have
         for rebuildFile in self.m_currentBackupState["files"].keys():
+            # Make a copy of the path incase we need to edit it for windows 
             rebuildFilePath = rebuildFile
             if system() == "Windows":
-                # We need to remove the : from the path
+                # We need to remove the : from the drive part of the path
                 rebuildFilePath = rebuildFile.replace(":","")
             pathToOutputFile = join( _outputDir, rebuildFilePath )
             print(f"Rebuilding: {pathToOutputFile}")
+            # Make sure the folder structure is already in place where we are putting the restored file
             if not exists( dirname( pathToOutputFile ) ):
                 makedirs( dirname( pathToOutputFile ) )
+            # Get the file contents and write it out
             fileContents = self.ReBuildFileFromBackup( rebuildFile )
             with open( pathToOutputFile, "w" ) as outputRebuildFile:
                 outputRebuildFile.write( "".join(fileContents) )
@@ -107,28 +115,31 @@ class JBackup_Core:
 
     # Function to find the differences between two files and return a list detailing those changes
     def DiffFiles( self, _oldFile, _newFile ):
-        # First we need to read the content of the file
-        newfileObject = open( _newFile, "r" )
-        newFileContents = newfileObject.readlines()
         changes = []
-        # First check if there is no old file. Add the whole file if it didn't exist previously
+        # First check if there is no old file. Add the whole file if it didn't exist previously, no need to diff
         if _oldFile == None:
             changes.append({
                 "type": "wholeFile",
-                "content": newFileContents
+                "content": _newFile
             })
             return changes
         else:
+            # Choose a differ and get the changes
             Differ = JDiffer( "difflib" )
-            changes = Differ.Diff( _oldFile, newFileContents )
+            changes = Differ.Diff( _oldFile, _newFile )
         return changes
 
 
     # Function that returns a dictionary for the changes to a file vs the files currently backed up state
     def BackupFile( self, _path ):
+        # First we need to read the content of the file
+        fileObject = open( _path, "r" )
+        fileContents = fileObject.readlines()
+        # This will be the contents describing the changes from the previous file state to the current
         fileUpdate = {
             "mtime": getmtime( _path ),
-            "changes": self.DiffFiles( self.ReBuildFileFromBackup( _path ), _path )
+            # Rebuild the currently backed up version of the file and then diff it against what is already there
+            "changes": self.DiffFiles( self.ReBuildFileFromBackup( _path ), fileContents )
         }
 
         return fileUpdate
@@ -137,20 +148,26 @@ class JBackup_Core:
     def UpdateBackup( self, _newPaths=[] ):
         # This will only work on the latest files so we need to update the backup state to latest
         self.GetBackupState()
+        # Default change dict
         updateChanges = {
             "ctime": datetime.now(),
             "files": {},
             "backupPaths": set(_newPaths)
         }
+        # We've already added the new backup paths (if any) to the updateChanges dict but
+        # we want to go through all new and existing backup paths
         backupPaths = self.m_currentBackupState['backupPaths'].union(updateChanges["backupPaths"])
         for path in backupPaths:
+            # If the path is a file we back that up, if it is a folder we recursively go through and back up all files
             if isdir(path):
                 # Walk the directory tree
                 for root, dirs, files in walk( path ):
                     for filePath in [join(root, f) for f in files]:
+                        # Check if the file needs backing up
                         if self.isFileUpdated( filePath ):
                             updateChanges["files"][filePath] = self.BackupFile( filePath )
             else:
+                # Check if the file needs backing up
                 if self.isFileUpdated( path ):
                     updateChanges["files"][path] = self.BackupFile( path )
         
