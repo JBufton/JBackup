@@ -19,6 +19,23 @@ class JBackup_Core:
             "files":{}
         }
 
+    # Function to return a list of backups and their date/times
+    def GetListOfBackups( self ):
+        files = sorted([f for f in listdir(self.m_backupPath) if ".pkl" in f])
+        backupFiles = []
+        for updateFile in files:
+            backupDict = pickle.load( open(join(self.m_backupPath, updateFile), "rb") )
+            backupFiles.append(
+                {
+                    "date": backupDict["ctime_date"],
+                    "time": backupDict["ctime_time"],
+                    # A combined datetime number to sort by
+                    "datetime": int(backupDict["ctime_date"] + backupDict["ctime_time"]),
+                    "files": backupDict["files"].keys()
+                }
+            )
+        return sorted(backupFiles, key=lambda k: k['datetime'])
+
     # Function to set m_currentBackupState to a specific date or latest if _date set to default
     def GetBackupState( self, _date=None, _time=None ):
         if _date == None and _time == None:
@@ -186,15 +203,23 @@ class JBackup_Core:
         # Now we have written the update lets get the latest backup state to load those changes into the current backup state
         self.GetBackupState()
 
+# Function to print a list of backups nicely
+def PrintBackupList( _backupList ):
+    spacesBetweenItems = 30
+    for backup in _backupList:
+        print( f"{backup['date'][6:]}-{backup['date'][4:6]}-{backup['date'][:4]}".ljust(spacesBetweenItems), end='' )
+        print( f"{backup['time'][:2]}-{backup['time'][2:4]}-{backup['time'][4:]}".ljust(spacesBetweenItems) )
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--makeBackup", default=False ,action="store_true", help="Use this flag to make JBackup generate a backup")
-    parser.add_argument("--backupsLocation", nargs="?", default="Default", type=str, help="Use this flag to determine where you want the backup to be made")
+    parser.add_argument("--backupsLocation", nargs="?", default="Default", type=str, help="Use this flag to determine where you want backups to be made or where they currently exist")
     parser.add_argument("--addBackupPaths", nargs="*", default=[], help="Use this flag to add files or folders to a new backup")
     parser.add_argument("--restore", default=False, action="store_true", help="Use this flag to restore the backups")
     parser.add_argument("--restoreDate", nargs="?", default=None, type=str, help="Use this flag in conjunction with --restore to choose the date to which to restore the files, needs to be in format DD/MM/YYYY")
     parser.add_argument("--restoreTime", nargs="?", default=None, type=str, help="Use this flag in conjunction with --restore to choose the date to which to restore the files, needs to be in format HH/MM/SS")
     parser.add_argument("--restoreLocation", nargs="?", default="Default", help="Use this flag to determine the location of the restored files when used in conjunction with --restore")
+    parser.add_argument("--listBackups", default=False, action="store_true", help="Use this flag to get a list of backups and when they were in the backup location")
     args = parser.parse_args()
 
     restoreLocation = args.restoreLocation
@@ -211,6 +236,8 @@ if __name__ == "__main__":
     
     JBackup = JBackup_Core()
     JBackup.m_backupPath = backupsLocation
+    if args.listBackups:
+        PrintBackupList( JBackup.GetListOfBackups() )
 
     if args.makeBackup:
         JBackup.UpdateBackup(_newPaths=args.addBackupPaths)
