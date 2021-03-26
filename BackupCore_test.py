@@ -1,10 +1,11 @@
 from tempfile import TemporaryDirectory
-from os.path import join, isfile
+from os.path import join, isfile, dirname
 from os import listdir
 from random import randint, choice
 from string import ascii_letters
 from BackupCore import JBackup_Core
 from pprint import pprint
+import pickle
 
 def setupFiles(_numberOfFiles, _location):
     for i in range( _numberOfFiles ):
@@ -76,4 +77,32 @@ class TestBackupCore:
                                 pprint(originalFileContents)
                                 pprint(recreatedFileContents)
                                 print( f"{tempFile_Original} == {join(tempRestore, tempFile_Original.replace(':', ''))}")
+    
+    # A test to check loading and setting defaults behaviour
+    def test_defaults(self):
+        with TemporaryDirectory() as tempBackupPath:
+            with TemporaryDirectory() as tempRestorePath:
+                # Testing saving defaults
+                JBackup_createDefaults = JBackup_Core( _backupPath=tempBackupPath, _restoreLocation=tempRestorePath, _saveAsDefault=True )
+                defaults = pickle.load( open(join(dirname(__file__), "defaults.pkl"), "rb" ) )
+                assert defaults["backupPath"] == tempBackupPath
+                assert defaults["restorePath"] == tempRestorePath
+                # Testing loading defaults
+                del JBackup_createDefaults
+                JBackup_loadDefaults = JBackup_Core()
+                assert JBackup_loadDefaults.m_backupPath == tempBackupPath
+                assert JBackup_loadDefaults.m_restorePath == tempRestorePath
+                # Testing giving JBackup_Core paths but not setting as default
+                del JBackup_loadDefaults
+                fakeBackupPath = "some/Backup/Path/"
+                fakeRestorePath = "some/Restore/Path/"
+                JBackup_setPaths = JBackup_Core( _backupPath=fakeBackupPath, _restoreLocation=fakeRestorePath )
+                assert JBackup_setPaths.m_backupPath == fakeBackupPath
+                assert JBackup_setPaths.m_restorePath == fakeRestorePath
+                # Now test that the setting of paths didn't save and was only temporary for this object i.e. the defaults on disk load again
+                del JBackup_setPaths
+                default_JBackup = JBackup_Core()
+                assert default_JBackup.m_backupPath == tempBackupPath
+                assert default_JBackup.m_restorePath == tempRestorePath
+
 

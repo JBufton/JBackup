@@ -8,9 +8,19 @@ import argparse
 
 class JBackup_Core:
 
-    def __init__(self):
-        # Location of where to store backup
-        self.m_backupPath = ""
+    def __init__(self, _backupPath="", _restoreLocation="", _saveAsDefault=False):
+        self.m_defaultsLocation = join(dirname(__file__), "defaults.pkl")
+        defaults = self.GetDefaults()
+        if defaults:
+            self.m_backupPath = defaults["backupPath"]
+            self.m_restorePath = defaults["restorePath"]
+        else:
+            self.m_backupPath = join( expanduser("~"), "JBackup", "Backups" )
+            self.m_restorePath = join( expanduser("~"), "JBackup", "Restore" )
+        if _backupPath:
+            self.m_backupPath = _backupPath
+        if _restoreLocation:
+            self.m_restorePath = _restoreLocation
         # The list of files in the backup and their current states aswell as other information about the current backup
         self.m_currentBackupState = {
             "latest": False,
@@ -18,6 +28,25 @@ class JBackup_Core:
             "backupPaths": set(),
             "files":{}
         }
+
+        if _saveAsDefault:
+            self.SaveDefaults()
+
+    # Function to check if a defaults file exists and load it
+    def GetDefaults( self ):
+        if exists(self.m_defaultsLocation):
+            defaults = pickle.load(open(self.m_defaultsLocation, "rb"))
+            return defaults
+        else:
+            return None
+    
+    def SaveDefaults( self ):
+        defaults = {
+            "backupPath": self.m_backupPath,
+            "restorePath": self.m_restorePath
+        }
+
+        pickle.dump( defaults, open(self.m_defaultsLocation, "wb")  )
 
     # Function to return a list of backups and their date/times
     def GetListOfBackups( self ):
@@ -113,7 +142,9 @@ class JBackup_Core:
 
     # Function to generate all of the files that are backed up to the desired location
     # pretty much recursively use RebuildFileFromBackup()
-    def RebuildFiles( self, _outputDir ):
+    def RebuildFiles( self, _outputDir=None ):
+        if not _outputDir:
+            _outputDir = self.m_restorePath
         print("Rebuilding Files")
         # Make sure the output location exists
         if not exists( _outputDir ):
@@ -213,29 +244,17 @@ def PrintBackupList( _backupList ):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--makeBackup", default=False ,action="store_true", help="Use this flag to make JBackup generate a backup")
-    parser.add_argument("--backupsLocation", nargs="?", default="Default", type=str, help="Use this flag to determine where you want backups to be made or where they currently exist")
+    parser.add_argument("--backupsLocation", nargs="?", default="", type=str, help="Use this flag to determine where you want backups to be made or where they currently exist")
     parser.add_argument("--addBackupPaths", nargs="*", default=[], help="Use this flag to add files or folders to a new backup")
     parser.add_argument("--restore", default=False, action="store_true", help="Use this flag to restore the backups")
     parser.add_argument("--restoreDate", nargs="?", default=None, type=str, help="Use this flag in conjunction with --restore to choose the date to which to restore the files, needs to be in format DD/MM/YYYY")
     parser.add_argument("--restoreTime", nargs="?", default=None, type=str, help="Use this flag in conjunction with --restore to choose the date to which to restore the files, needs to be in format HH/MM/SS")
-    parser.add_argument("--restoreLocation", nargs="?", default="Default", help="Use this flag to determine the location of the restored files when used in conjunction with --restore")
+    parser.add_argument("--restoreLocation", nargs="?", default="", help="Use this flag to determine the location of the restored files when used in conjunction with --restore")
     parser.add_argument("--listBackups", default=False, action="store_true", help="Use this flag to get a list of backups and when they were in the backup location")
+    parser.add_argument("--saveDefaults", default=False, action="store_true", help="Use this option to save your backups location and your restore location as default")
     args = parser.parse_args()
-
-    restoreLocation = args.restoreLocation
-    if args.restoreLocation == "Default":
-        restoreLocation = join( expanduser("~"), "JBackup", "Restore" )
-        if not exists(restoreLocation):
-            makedirs(restoreLocation)
-
-    backupsLocation = args.backupsLocation
-    if args.backupsLocation == "Default":
-        backupsLocation = join( expanduser("~"), "JBackup", "Backups" )
-        if not exists(backupsLocation):
-            makedirs(backupsLocation)
     
-    JBackup = JBackup_Core()
-    JBackup.m_backupPath = backupsLocation
+    JBackup = JBackup_Core(_backupPath=args.backupsLocation, _restoreLocation=args.restoreLocation)
     if args.listBackups:
         PrintBackupList( JBackup.GetListOfBackups() )
 
@@ -243,4 +262,4 @@ if __name__ == "__main__":
         JBackup.UpdateBackup(_newPaths=args.addBackupPaths)
     elif args.restore:
         JBackup.GetBackupState(_date=args.restoreDate, _time=args.restoreTime)
-        JBackup.RebuildFiles(_outputDir=restoreLocation)
+        JBackup.RebuildFiles()
