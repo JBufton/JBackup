@@ -32,7 +32,7 @@ class JBackup_Core:
         if _saveAsDefault:
             self.SaveDefaults()
 
-    # Function to check if a defaults file exists and load it
+    '''Function to check if a defaults file exists and load it'''
     def GetDefaults( self ):
         if exists(self.m_defaultsLocation):
             defaults = pickle.load(open(self.m_defaultsLocation, "rb"))
@@ -48,7 +48,7 @@ class JBackup_Core:
 
         pickle.dump( defaults, open(self.m_defaultsLocation, "wb")  )
 
-    # Function to return a list of backups and their date/times
+    '''Function to return a list of backups and their date/times'''
     def GetListOfBackups( self ):
         files = sorted([f for f in listdir(self.m_backupPath) if ".pkl" in f])
         backupFiles = []
@@ -65,7 +65,7 @@ class JBackup_Core:
             )
         return sorted(backupFiles, key=lambda k: k['datetime'])
 
-    # Function to set m_currentBackupState to a specific date or latest if _date set to default
+    '''Function to set m_currentBackupState to a specific date or latest if _date set to default'''
     def GetBackupState( self, _date=None, _time=None ):
         if _date == None and _time == None:
             self.m_currentBackupState["latest"] = True
@@ -101,7 +101,7 @@ class JBackup_Core:
                 # We don't want to apply this update because it is after the date we want to sync to
                 return self.m_currentBackupState
 
-    # Function to check if a file is different vs the latest file
+    '''Function to check if a file is different vs the latest file'''
     def isFileUpdated( self, _path ):
         # First check if the current backup state is the latest
         if not self.m_currentBackupState["latest"]:
@@ -116,7 +116,7 @@ class JBackup_Core:
             # The file is new and so is updated by default
             return True
 
-    # Function that given a file path gets the contents of the latest backed up version of that file as a list of lines
+    '''Function that given a file path gets the contents of the latest backed up version of that file as a list of lines'''
     def ReBuildFileFromBackup( self, _path):
         if _path in self.m_currentBackupState["files"].keys():
             # We're working forward through time so first change will always be a whileFile change
@@ -140,8 +140,8 @@ class JBackup_Core:
             return None
 
 
-    # Function to generate all of the files that are backed up to the desired location
-    # pretty much recursively use RebuildFileFromBackup()
+    '''Function to generate all of the files that are backed up to the desired location
+    pretty much recursively use RebuildFileFromBackup()'''
     def RebuildFiles( self, _outputDir=None ):
         if not _outputDir:
             _outputDir = self.m_restorePath
@@ -168,7 +168,7 @@ class JBackup_Core:
 
 
 
-    # Function to find the differences between two files and return a list detailing those changes
+    '''Function to find the differences between two files and return a list detailing those changes'''
     def DiffFiles( self, _oldFile, _newFile ):
         changes = []
         # First check if there is no old file. Add the whole file if it didn't exist previously, no need to diff
@@ -185,7 +185,7 @@ class JBackup_Core:
         return changes
 
 
-    # Function that returns a dictionary for the changes to a file vs the files currently backed up state
+    '''Function that returns a dictionary for the changes to a file vs the files currently backed up state'''
     def BackupFile( self, _path ):
         # First we need to read the content of the file
         fileObject = open( _path, "r" )
@@ -199,7 +199,7 @@ class JBackup_Core:
 
         return fileUpdate
 
-    # Function to recursively find all of the files changed in m_paths
+    '''Function to recursively find all of the files changed in m_paths'''
     def UpdateBackup( self, _newPaths=[] ):
         # This will only work on the latest files so we need to update the backup state to latest
         self.GetBackupState()
@@ -234,7 +234,7 @@ class JBackup_Core:
         # Now we have written the update lets get the latest backup state to load those changes into the current backup state
         self.GetBackupState()
 
-# Function to print a list of backups nicely
+'''Function to print a list of backups nicely'''
 def PrintBackupList( _backupList ):
     spacesBetweenItems = 30
     for backup in _backupList:

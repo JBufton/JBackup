@@ -36,13 +36,13 @@ def changeFiles( _location, _addFileLength ):
 
 class TestBackupCore:
 
-    # I want this test to do the following:
-    # Generate 10 files with random content
-    # Use JBackup to back these files up
-    # Edit the files contents twice and backing up after each change
-    # Make sure after each backup that there has been a new backup file saved
-    # Use JBackup to restore the files
-    # Compare the current actual files with their restored counterparts
+    ''' I want this test to do the following:
+    Generate 10 files with random content
+    Use JBackup to back these files up
+    Edit the files contents twice and backing up after each change
+    Make sure after each backup that there has been a new backup file saved
+    Use JBackup to restore the files
+    Compare the current actual files with their restored counterparts'''
     def test_10ChangeRoundtrip(self):
         # Create all the temporary directories we need
         with TemporaryDirectory() as tempFiles:
@@ -78,7 +78,7 @@ class TestBackupCore:
                                 pprint(recreatedFileContents)
                                 print( f"{tempFile_Original} == {join(tempRestore, tempFile_Original.replace(':', ''))}")
     
-    # A test to check loading and setting defaults behaviour
+    '''A test to check loading and setting defaults behaviour'''
     def test_defaults(self):
         with TemporaryDirectory() as tempBackupPath:
             with TemporaryDirectory() as tempRestorePath:

@@ -5,7 +5,7 @@ class JDiffer:
     def __init__(self, _diffTool):
         self.m_diffTool = _diffTool
 
-    # Function to use difflib to diff two files contents
+    '''Function to use difflib to diff two files contents'''
     def difflib_diff(self, _file1, _file2):
         import difflib
         Differ = difflib.Differ()
@@ -38,7 +38,7 @@ class JDiffer:
             index += 1
         return changes
 
-    # WIP: a custom differ, doesn't work yet and is bad generally
+    '''WIP: a custom differ, doesn't work yet and is bad generally'''
     def customDiff_diff(self, _file1, _file2 ):
         temp_file1 = _file1
         temp_file2 = _file2
@@ -104,7 +104,7 @@ class JDiffer:
         print(temp_file2)
         return changes
 
-    # General diff function that will let you diff using different libraries and functions
+    '''General diff function that will let you diff using different libraries and functions'''
     def Diff(self, _file1, _file2):
         if self.m_diffTool == "difflib":
             return self.difflib_diff( _file1, _file2 )
