@@ -8,7 +8,7 @@ import argparse
 
 class JBackup_Core:
 
-    def __init__(self, _backupPath="", _restoreLocation="", _saveAsDefault=False):
+    def __init__(self, _backupPath="", _restoreLocation=""):
         self.m_defaultsLocation = join(dirname(__file__), "defaults.pkl")
         defaults = self.GetDefaults()
         if defaults:
@@ -28,9 +28,6 @@ class JBackup_Core:
             "backupPaths": set(),
             "files":{}
         }
-
-        if _saveAsDefault:
-            self.SaveDefaults()
 
     '''Function to check if a defaults file exists and load it'''
     def GetDefaults( self ):

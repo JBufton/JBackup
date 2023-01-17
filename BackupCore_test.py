@@ -83,7 +83,8 @@ class TestBackupCore:
         with TemporaryDirectory() as tempBackupPath:
             with TemporaryDirectory() as tempRestorePath:
                 # Testing saving defaults
-                JBackup_createDefaults = JBackup_Core( _backupPath=tempBackupPath, _restoreLocation=tempRestorePath, _saveAsDefault=True )
+                JBackup_createDefaults = JBackup_Core( _backupPath=tempBackupPath, _restoreLocation=tempRestorePath)
+                JBackup_createDefaults.SaveDefaults()
                 defaults = pickle.load( open(join(dirname(__file__), "defaults.pkl"), "rb" ) )
                 assert defaults["backupPath"] == tempBackupPath
                 assert defaults["restorePath"] == tempRestorePath
